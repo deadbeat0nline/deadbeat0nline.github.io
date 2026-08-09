@@ -1,8 +1,20 @@
 {
   "nowPlaying": {
-    "title": "know who you are",
-    "url": "https://soundcloud.com/deadbeatonline/know-who-you-are"
+    "title": "",
+    "url": ""
   },
+  "introSong": {
+    "enabled": true,
+    "activeId": "smsliv40v0"
+  },
+  "introSongLibrary": [
+    {
+      "id": "smsliv40v0",
+      "label": "know who you are",
+      "url": "https://soundcloud.com/deadbeatonline/know-who-you-are",
+      "startAt": 12
+    }
+  ],
   "links": [
     {
       "label": "Instagram",
