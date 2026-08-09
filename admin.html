@@ -542,7 +542,7 @@
     row.innerHTML = `
       <div class="top">
         <input class="lbl" type="text" placeholder="Track name (e.g. know who you are)" value="${esc(t.label)}">
-        <input class="url" type="text" placeholder="https://soundcloud.com/deadbeat0nline/..." value="${esc(t.url)}">
+        <input class="url" type="text" placeholder="SoundCloud link, or a direct .mp3 link (fastest)" value="${esc(t.url)}">
       </div>
       <div class="bottom">
         <input class="extra songstart" type="text" placeholder="Start at, e.g. 0:45" value="${esc(formatTime(t.startAt))}" style="flex:0 0 110px;">
@@ -558,24 +558,41 @@
         <button type="button" class="addlink setstart" style="margin-top:8px;padding:10px;font-size:13px;">⏱ Use whatever's playing right now as the start</button>
       </div>`;
 
-    let widget = null;
+    let widget = null;      // SoundCloud driver
+    let audioEl = null;     // direct-file driver (mp3/wav/etc)
     const previewBox = row.querySelector('.preview');
     const previewBtn = row.querySelector('.preview-toggle');
     const playerHost = row.querySelector('.scplayer');
+    const isAudioFile = (u) => /\.(mp3|wav|ogg|m4a|aac)(\?|#|$)/i.test(u);
 
     previewBtn.onclick = async () => {
       const isOpen = previewBox.style.display !== 'none';
       if(isOpen){
         if(widget) widget.pause();
+        if(audioEl) audioEl.pause();
         previewBox.style.display = 'none';
         return;
       }
       const url = row.querySelector('.url').value.trim();
-      if(!url){ status('Paste a SoundCloud track link first.', 'err'); return; }
+      if(!url){ status('Paste a track link first (SoundCloud or a direct .mp3).', 'err'); return; }
       previewBox.style.display = 'block';
+
+      if(isAudioFile(url)){
+        playerHost.innerHTML = '';
+        widget = null;
+        audioEl = document.createElement('audio');
+        audioEl.controls = true;
+        audioEl.preload = 'auto';
+        audioEl.src = url;
+        audioEl.style.cssText = 'width:100%;border-radius:8px;';
+        playerHost.appendChild(audioEl);
+        return;
+      }
+
       playerHost.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px 0;">Loading player…</div>';
       await ensureSCApi();
       playerHost.innerHTML = '';
+      audioEl = null;
       const iframe = document.createElement('iframe');
       iframe.width = '100%';
       iframe.height = '166';
@@ -589,6 +606,12 @@
     };
 
     row.querySelector('.setstart').onclick = () => {
+      if(audioEl){
+        const secs = audioEl.currentTime || 0;
+        row.querySelector('.songstart').value = formatTime(secs);
+        status('Start point set to ' + (formatTime(secs) || '0:00') + '.', 'ok');
+        return;
+      }
       if(!widget){ status('Open the preview player and play the track first.', 'err'); return; }
       widget.getPosition((ms) => {
         const secs = ms / 1000;
@@ -600,6 +623,7 @@
     row.querySelector('.remove').onclick = () => {
       const wasActive = row.querySelector('.songactive').checked;
       if(widget) widget.pause();
+      if(audioEl) audioEl.pause();
       row.remove();
       if(wasActive){
         const first = $('songrows').querySelector('.songactive');

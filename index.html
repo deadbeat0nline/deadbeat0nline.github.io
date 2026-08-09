@@ -630,6 +630,60 @@
     if(!s || !s.url) return;
     const startMs = Math.max(0, (parseFloat(s.startAt) || 0) * 1000);
 
+    // ---- direct audio file (mp3/wav/ogg/m4a hosted on this site or
+    // anywhere) — much faster than the SoundCloud widget: no iframe,
+    // no API handshake, near-instant start and precise seeking ----
+    if(/\.(mp3|wav|ogg|m4a|aac)(\?|#|$)/i.test(s.url)){
+      const startSec = startMs / 1000;
+      const a = new Audio(s.url);
+      a.preload = 'auto';
+      a.muted = true;
+      let revealed = false;
+      let seekTries = 0;
+      const reveal = () => {
+        if(revealed) return;
+        revealed = true;
+        a.muted = false;
+        a.volume = 1;
+      };
+      // returns true once the playhead is actually AT the start point.
+      // browsers silently clamp a currentTime set too early (before any
+      // data is seekable), so we verify and re-issue the seek until it
+      // sticks instead of trusting the first attempt.
+      const inPosition = () => {
+        if(startSec <= 0) return true;
+        if(Math.abs(a.currentTime - startSec) <= 0.75) return true;
+        if(seekTries < 8){
+          seekTries++;
+          try{ a.currentTime = startSec; }catch(e){}
+        } else {
+          return true; // give up gracefully rather than staying silent
+        }
+        return false;
+      };
+      a.addEventListener('loadedmetadata', inPosition);
+      a.addEventListener('canplay', inPosition);
+      a.addEventListener('seeked', () => { if(inPosition()) reveal(); });
+      a.addEventListener('playing', () => { if(inPosition()) reveal(); });
+      a.addEventListener('timeupdate', function tu(){
+        if(inPosition()){ reveal(); a.removeEventListener('timeupdate', tu); }
+      });
+      const kick = () => {
+        a.muted = false;
+        if(a.paused){
+          try{ a.currentTime = startSec; }catch(e){}
+          a.play().catch(() => {});
+        }
+        revealed = true;
+        removeEventListener('pointerdown', kick);
+        removeEventListener('keydown', kick);
+      };
+      addEventListener('pointerdown', kick);
+      addEventListener('keydown', kick);
+      a.play().catch(() => { /* fully blocked — the tap listener above recovers */ });
+      return;
+    }
+
     // hidden SoundCloud player + widget API to control it
     const f = document.createElement('iframe');
     f.allow = 'autoplay';

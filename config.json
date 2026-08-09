@@ -5,9 +5,15 @@
   },
   "introSong": {
     "enabled": true,
-    "activeId": "smsliv40v0"
+    "activeId": "tshard"
   },
   "introSongLibrary": [
+    {
+      "id": "tshard",
+      "label": "ts hard",
+      "url": "https://deadbeat0nline.com/ts-hard.mp3",
+      "startAt": 0
+    },
     {
       "id": "smsliv40v0",
       "label": "know who you are",
