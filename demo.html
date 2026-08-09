@@ -197,7 +197,8 @@
 
   a.nowplaying{
     display:block;
-    margin-top:26px;
+    margin-top:auto;
+    padding-top:26px;
     font-size:10px;
     color:var(--gold);
     text-decoration:none;
@@ -466,6 +467,16 @@
     pointer-events:none;
   }
   body.ko .koflash{ display:flex; animation:kostrobe .14s steps(1) infinite; }
+
+  /* phones: fill the screen, bigger everything */
+  @media (max-width:480px){
+    .name{ font-size:clamp(24px,7.6vw,38px); }
+    .table-head{ font-size:9px; }
+    .links a{ font-size:13px; padding:17px 10px; }
+    a.nowplaying{ font-size:10px; }
+    .press-start{ font-size:9px; margin-top:20px; }
+    .press-start .count{ font-size:15px; }
+  }
   @keyframes kostrobe{
     0%{ background:rgba(90,0,0,0.5); transform:rotate(-5deg) translate(0,0); }
     30%{ background:rgba(0,0,0,0.75); transform:rotate(-4deg) translate(-14px,6px) scale(1.04); }
