@@ -470,7 +470,7 @@
 
   /* phones: fill the screen, bigger everything */
   @media (max-width:480px){
-    .screen{ padding-top:13vh; }
+    .screen{ padding-top:23vh; }
     .name{ font-size:clamp(24px,7.6vw,38px); }
     .table-head{ font-size:9px; }
     .links a{ font-size:13px; padding:17px 10px; }
@@ -529,8 +529,7 @@
   </div>
   <ul class="links" id="links"></ul>
 
-  <a class="nowplaying" id="nowplaying" href="#" target="_blank" rel="noopener noreferrer">&#9654; NOW PLAYING: ...</a>
-  <div class="press-start">CONTINUE? <span class="count" id="countdown">9</span> &mdash; CLICK A LINK</div>
+  <a class="nowplaying" id="nowplaying" href="#" target="_blank" rel="noopener noreferrer">...</a>
 
   <footer>&copy; 199X DEADBEAT CORP &mdash; LICENSED BY NO ONE</footer>
 </div>
@@ -577,7 +576,7 @@
     const np = document.getElementById('nowplaying');
     if(cfg.nowPlaying && cfg.nowPlaying.title){
       np.href = cfg.nowPlaying.url || '#';
-      np.innerHTML = `&#9654; NOW PLAYING: ${cfg.nowPlaying.title.toUpperCase()}`;
+      np.textContent = cfg.nowPlaying.title.toUpperCase();
     } else {
       np.style.display = 'none';
     }
@@ -588,23 +587,12 @@
     .then(render)
     .catch(() => render(FALLBACK));
 
-  // CONTINUE? countdown — 9 down to 0, then K.O., then the machine resets.
+  // the machine still takes a hit every 10 seconds
   (function(){
-    const el = document.getElementById('countdown');
-    let n = 9;
     setInterval(() => {
-      n = n - 1;
-      if(n < 0){
-        n = 9;
-        el.textContent = n;
-        return;
-      }
-      el.textContent = n;
-      if(n === 0){
-        document.body.classList.add('ko');
-        setTimeout(() => document.body.classList.remove('ko'), 700);
-      }
-    }, 1000);
+      document.body.classList.add('ko');
+      setTimeout(() => document.body.classList.remove('ko'), 700);
+    }, 10000);
   })();
 
   // power-on sequence: insert coin... then the tube flashes to life
