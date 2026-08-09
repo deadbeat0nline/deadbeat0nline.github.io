@@ -641,17 +641,39 @@
     api.src = 'https://w.soundcloud.com/player/api.js';
     api.onload = () => {
       const w = SC.Widget(f);
+      let widgetReady = false;
+      let started = false;
       let seeked = false;
-      w.bind(SC.Widget.Events.READY, () => {
+
+      // only actually hit play once BOTH the track is loaded AND the
+      // boot flash has fired — whichever of those finishes last is what
+      // decides the moment, so the drop always lands on the flash.
+      function tryStart(){
+        if(started || !widgetReady || !window.__bootFlashed) return;
+        started = true;
         w.seekTo(startMs);
         w.play();
+      }
+
+      w.bind(SC.Widget.Events.READY, () => {
+        widgetReady = true;
+        w.seekTo(startMs); // cue it up at the right spot while still paused
+        tryStart();
       });
       w.bind(SC.Widget.Events.PLAY, () => {
         if(!seeked){ seeked = true; w.seekTo(startMs); }
       });
-      // browsers often block autoplay with sound — start on first tap/click instead
+      document.addEventListener('siteboot', tryStart);
+
+      // browsers often block autoplay with sound until a real tap/click —
+      // this both unlocks it and covers the case where tryStart() above
+      // got silently blocked
       const kick = () => {
-        w.isPaused(paused => { if(paused){ if(!seeked){ seeked = true; w.seekTo(startMs); } w.play(); } });
+        if(started){
+          w.isPaused(paused => { if(paused) w.play(); });
+        } else {
+          tryStart();
+        }
         removeEventListener('pointerdown', kick);
         removeEventListener('keydown', kick);
       };
@@ -678,7 +700,11 @@
       el.textContent = word.slice(0, ++i);
       if(i >= word.length){
         clearInterval(t);
-        setTimeout(() => document.body.classList.add('on'), 700);
+        setTimeout(() => {
+          document.body.classList.add('on');
+          window.__bootFlashed = true;
+          document.dispatchEvent(new Event('siteboot'));
+        }, 700);
       }
     }, 90);
   })();
