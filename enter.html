@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>deadbeat0nline</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root{ --red:#ff2222; --gold:#ffcc00; }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:#000; color:#e8e8e8;
+    font-family:'Press Start 2P',monospace;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #c{ position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0; }
+
+  /* CRT scanline glass over everything, including the links */
+  .glass{
+    position:fixed; inset:0; z-index:5; pointer-events:none;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.26) 0 2px, transparent 2px 4px);
+    mix-blend-mode:multiply;
+  }
+
+  .stage{
+    position:fixed; inset:0; z-index:3;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:24px 14px;
+    pointer-events:none;
+  }
+
+  .mark{
+    font-family:'Nosifer',cursive;
+    font-size:clamp(21px,6.6vw,46px);
+    color:#e01212;
+    line-height:1.15;
+    transform:rotate(-2deg);
+    margin:0 0 6px;
+    text-shadow:
+      2px 2px 0 #4a0000,
+      4px 4px 0 #2a0000,
+      0 0 30px rgba(255,20,20,0.8),
+      0 0 76px rgba(255,0,0,0.4);
+  }
+  .np{
+    font-size:clamp(9px,2.4vw,13px);
+    color:var(--gold);
+    letter-spacing:1px;
+    text-decoration:none;
+    pointer-events:auto;
+    margin-bottom:26px;
+    padding:8px 12px;
+    border-top:2px solid rgba(180,0,0,.75);
+    border-bottom:2px solid rgba(180,0,0,.75);
+    text-shadow:0 0 12px rgba(255,215,0,.6);
+    animation:blink 1.7s steps(1) infinite;
+  }
+  .np:hover{ color:#fff; animation:none; text-shadow:0 0 16px var(--gold); }
+  @keyframes blink{ 50%{ opacity:.45; } }
+
+  /* the links: chunks of meat you can click */
+  .objs{
+    display:flex; flex-wrap:wrap; gap:10px 12px;
+    align-items:center; justify-content:center;
+    max-width:620px;
+  }
+  .obj{
+    pointer-events:auto;
+    position:relative;
+    display:inline-block;
+    padding:13px 17px;
+    font-size:clamp(9px,2.3vw,12px);
+    letter-spacing:1px;
+    color:#f2dede;
+    text-decoration:none;
+    background:rgba(38,2,4,0.46);
+    border:1px solid rgba(190,20,20,0.42);
+    text-shadow:1px 0 rgba(255,0,0,0.45), -1px 0 rgba(0,229,255,0.28);
+    backdrop-filter:blur(1.5px);
+    -webkit-backdrop-filter:blur(1.5px);
+    transition:color .12s, background .12s, border-color .12s;
+    will-change:transform;
+  }
+  .obj::after{
+    /* wet drip clinging to the bottom edge */
+    content:'';
+    position:absolute; left:12%; right:12%; top:100%;
+    height:9px;
+    background:
+      radial-gradient(60% 100% at 18% 0%, rgba(190,12,12,.85), transparent 70%),
+      radial-gradient(45% 100% at 62% 0%, rgba(150,8,8,.7),  transparent 70%);
+    filter:blur(.4px);
+    opacity:.85;
+    pointer-events:none;
+  }
+  .obj:hover, .obj:focus-visible{
+    color:#fff;
+    background:rgba(150,6,10,0.72);
+    border-color:rgba(255,60,60,0.9);
+    outline:none;
+  }
+
+  .back{
+    position:fixed; right:14px; bottom:12px; z-index:6;
+    font-size:8px; letter-spacing:1px;
+    color:rgba(232,232,232,0.45);
+    text-decoration:none; pointer-events:auto;
+  }
+  .back:hover{ color:#fff; text-shadow:0 0 10px var(--red); }
+
+  .gate{
+    position:fixed; inset:0; z-index:9;
+    display:flex; align-items:center; justify-content:center;
+    background:#000; cursor:pointer; transition:opacity .5s ease;
+  }
+  .gate.gone{ opacity:0; pointer-events:none; }
+  .gate span{
+    font-size:11px; letter-spacing:3px; color:var(--red);
+    animation:pulse 1.15s steps(1) infinite;
+    text-shadow:0 0 18px rgba(255,0,0,.8);
+  }
+  @keyframes pulse{ 50%{ opacity:.22; } }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div class="glass"></div>
+
+<div class="stage">
+  <h1 class="mark">deadbeat0nline</h1>
+  <a class="np" id="np" href="#" target="_blank" rel="noopener noreferrer"></a>
+  <div class="objs" id="objs"></div>
+</div>
+
+<a class="back" href="/">CLASSIC &gt;</a>
+
+<div class="gate" id="gate"><span>CLICK TO ENTER</span></div>
+
+<script src="viz-engine.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('c');
+  const gate   = document.getElementById('gate');
+  const objsEl = document.getElementById('objs');
+  const npEl   = document.getElementById('np');
+
+  let viz = null;
+  try { viz = DBVIZ.Viz({ canvas: canvas, scale: 0.58 }); } catch(e){ /* no webgl: links still work */ }
+
+  const FALLBACK = { links:[{label:'soundcloud',url:'https://soundcloud.com/deadbeatonline'}] };
+  let trackUrl = 'ts-hard.mp3';
+
+  function build(cfg){
+    (cfg.links || []).forEach(l => {
+      const a = document.createElement('a');
+      a.className = 'obj';
+      a.href = l.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = (l.label || '').toUpperCase();
+      a.dataset.seed = Math.random().toFixed(4);
+      objsEl.appendChild(a);
+    });
+    if(cfg.nowPlaying && cfg.nowPlaying.title){
+      npEl.textContent = cfg.nowPlaying.title.toUpperCase() + ' — OUT NOW';
+      npEl.href = cfg.nowPlaying.url || '#';
+    } else {
+      npEl.style.display = 'none';
+    }
+    const lib = cfg.introSongLibrary || [];
+    const act = lib.find(s => s.id === (cfg.introSong && cfg.introSong.activeId)) || lib[0];
+    if(act && act.url && /\.(mp3|wav|ogg|m4a|aac)(\?|#|$)/i.test(act.url)) trackUrl = act.url;
+  }
+
+  fetch('config.json?t=' + Date.now(), { cache:'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(build)
+    .catch(() => build(FALLBACK));
+
+  /* ---- audio ---- */
+  let audio = null, live = null, started = false;
+  function start(){
+    if(started) return;
+    started = true;
+    audio = new Audio(trackUrl);
+    audio.loop = true;
+    audio.preload = 'auto';
+    try { live = DBVIZ.LiveAudio(audio); } catch(e){ live = null; }
+    if(live && live.ctx.state === 'suspended') live.ctx.resume();
+    audio.play().catch(() => {});
+    gate.classList.add('gone');
+  }
+  gate.addEventListener('click', start);
+  gate.addEventListener('touchstart', start, { passive:true });
+  addEventListener('keydown', start);
+
+  /* ---- render + make the objects drift and flinch on the kick ---- */
+  const t0 = performance.now();
+  const idle = { bass:0.12, mid:0.10, treb:0.08, level:0.14, beat:0 };
+
+  function frame(){
+    const now = (performance.now() - t0) / 1000;
+    const a = live ? live.read(now) : idle;
+    if(viz) viz.draw(now, a);
+
+    const kick = viz ? viz.state.beat : 0;
+    const objs = objsEl.children;
+    for(let i = 0; i < objs.length; i++){
+      const el = objs[i];
+      const s  = parseFloat(el.dataset.seed) * 10;
+      // subtle drift so they feel suspended in the meat, but stay clickable
+      const dx = Math.sin(now * 0.42 + s) * 4.5 + kick * Math.sin(s * 7.0) * 5.0;
+      const dy = Math.cos(now * 0.35 + s * 1.4) * 3.5 + kick * Math.cos(s * 5.0) * 4.0;
+      const sc = 1 + kick * 0.035;
+      el.style.transform = 'translate(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px) scale(' + sc.toFixed(3) + ')';
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

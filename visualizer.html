@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>deadbeat0nline // visualizer</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root{ --red:#ff2222; --gold:#ffcc00; }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:#000; color:#e8e8e8;
+    font-family:'Press Start 2P',monospace;
+    overflow:hidden;
+  }
+  #c{ position:fixed; inset:0; width:100vw; height:100vh; display:block; }
+
+  /* everything above the meat */
+  .hud{
+    position:fixed; inset:0; z-index:3;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    pointer-events:none;
+    text-align:center;
+  }
+  .mark{
+    font-family:'Nosifer',cursive;
+    font-size:clamp(22px,7vw,58px);
+    color:#e01212;
+    line-height:1.15;
+    transform:rotate(-2deg);
+    text-shadow:
+      2px 2px 0 #4a0000,
+      4px 4px 0 #2a0000,
+      0 0 34px rgba(255,20,20,0.75),
+      0 0 80px rgba(255,0,0,0.4);
+    opacity:0; transition:opacity 1.1s ease;
+  }
+  body.live .mark{ opacity:1; }
+  .sub{
+    margin-top:16px;
+    font-size:9px; letter-spacing:2px;
+    color:var(--gold);
+    text-shadow:1px 0 rgba(255,0,0,0.4), -1px 0 rgba(0,229,255,0.3);
+    opacity:0; transition:opacity 1.4s ease .3s;
+  }
+  body.live .sub{ opacity:.85; }
+
+  .back{
+    position:fixed; left:14px; bottom:12px; z-index:4;
+    font-size:8px; letter-spacing:1px;
+    color:rgba(232,232,232,0.5);
+    text-decoration:none;
+    pointer-events:auto;
+  }
+  .back:hover{ color:#fff; text-shadow:0 0 10px var(--red); }
+
+  /* start gate — browsers won't give us audio without a gesture */
+  .gate{
+    position:fixed; inset:0; z-index:9;
+    display:flex; align-items:center; justify-content:center;
+    background:#000; cursor:pointer;
+    transition:opacity .55s ease;
+  }
+  .gate.gone{ opacity:0; pointer-events:none; }
+  .gate span{
+    font-size:11px; letter-spacing:3px; color:var(--red);
+    animation:pulse 1.15s steps(1) infinite;
+    text-shadow:0 0 18px rgba(255,0,0,.8);
+  }
+  @keyframes pulse{ 50%{ opacity:.25; } }
+
+  @media(max-width:520px){
+    .sub{ font-size:7px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="mark">deadbeat0nline</div>
+  <div class="sub" id="sub">LOADING</div>
+</div>
+
+<a class="back" href="/">&lt; BACK</a>
+
+<div class="gate" id="gate"><span>CLICK TO ENTER</span></div>
+
+<script src="viz-engine.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('c');
+  const gate   = document.getElementById('gate');
+  const sub    = document.getElementById('sub');
+
+  let viz;
+  try { viz = DBVIZ.Viz({ canvas: canvas, scale: 0.60 }); }
+  catch(e){ gate.innerHTML = '<span>WEBGL UNAVAILABLE</span>'; return; }
+
+  let audio = null, live = null, started = false;
+
+  // which track: whatever the control panel says is the active intro song
+  let trackUrl = 'ts-hard.mp3';
+  let trackName = '';
+  fetch('config.json?t=' + Date.now(), { cache:'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(cfg => {
+      const lib = cfg.introSongLibrary || [];
+      const act = lib.find(s => s.id === (cfg.introSong && cfg.introSong.activeId)) || lib[0];
+      if(act && act.url && /\.(mp3|wav|ogg|m4a|aac)(\?|#|$)/i.test(act.url)) trackUrl = act.url;
+      trackName = (cfg.nowPlaying && cfg.nowPlaying.title) || (act && act.label) || '';
+      if(trackName) sub.textContent = trackName.toUpperCase();
+    })
+    .catch(() => {});
+
+  function start(){
+    if(started) return;
+    started = true;
+
+    audio = new Audio(trackUrl);
+    audio.crossOrigin = 'anonymous';
+    audio.loop = true;
+    audio.preload = 'auto';
+
+    try { live = DBVIZ.LiveAudio(audio); } catch(e){ live = null; }
+    if(live && live.ctx.state === 'suspended') live.ctx.resume();
+
+    audio.play().catch(() => {});
+    gate.classList.add('gone');
+    document.body.classList.add('live');
+    if(!trackName) sub.textContent = 'VISUALIZER';
+  }
+
+  gate.addEventListener('click', start);
+  gate.addEventListener('touchstart', start, { passive:true });
+  addEventListener('keydown', start);
+
+  const t0 = performance.now();
+  const idle = { bass:0.12, mid:0.10, treb:0.08, level:0.14, beat:0 };
+
+  function frame(){
+    const now = (performance.now() - t0) / 1000;
+    let a = idle;
+    if(live){
+      a = live.read(now);
+    } else if(started){
+      // no analyser (rare) — keep it breathing so it never looks frozen
+      a = { bass:0.4+0.35*Math.abs(Math.sin(now*2.7)), mid:0.3, treb:0.25,
+            level:0.5, beat:(now%0.5)<0.05?0.8:0 };
+    }
+    viz.draw(now, a);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
