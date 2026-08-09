@@ -403,21 +403,15 @@
 
   <div class="card">
     <h2>🔊 Intro song</h2>
-    <p class="desc">Plays a song from SoundCloud while the site boots up — set the start time so the drop hits right when the screen flashes on. Heads up: some phones block auto-playing sound until the visitor taps the screen once.</p>
+    <p class="desc">Build a library of your SoundCloud tracks below, pick which one plays while the site boots up, and set where it starts so the drop lands right when the screen flashes on. Heads up: some phones block auto-playing sound until the visitor taps the screen once.</p>
     <div class="field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
         <input type="checkbox" id="is-enabled" style="width:18px;height:18px;accent-color:#e33;">
-        Play intro song when the site loads
+        Play the selected track when the site loads
       </label>
     </div>
-    <div class="field">
-      <label>SoundCloud song link</label>
-      <input type="url" id="is-url" placeholder="https://soundcloud.com/deadbeat0nline/your-song">
-    </div>
-    <div class="field">
-      <label>Start the song at (so the drop lands on the intro — use 1:23 or plain seconds like 83)</label>
-      <input type="text" id="is-start" placeholder="e.g. 0:45">
-    </div>
+    <div id="songrows"></div>
+    <button class="addlink" id="add-song">+ Add a track from SoundCloud</button>
   </div>
 
   <div class="card">
@@ -508,7 +502,7 @@
     updateMoveButtons();
   }
   function updateMoveButtons(){
-    const rows = [...document.querySelectorAll('.linkrow')];
+    const rows = [...$('linkrows').querySelectorAll('.linkrow')];
     rows.forEach((r, i) => {
       r.querySelector('.up').disabled = (i === 0);
       r.querySelector('.down').disabled = (i === rows.length - 1);
@@ -516,10 +510,52 @@
   }
   function esc(s){ return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
   function readRows(){
-    return [...document.querySelectorAll('.linkrow')].map(r => {
+    return [...$('linkrows').querySelectorAll('.linkrow')].map(r => {
       const lbl = r.querySelector('.lbl'), url = r.querySelector('.url'), extra = r.querySelector('.extra');
       return { label: lbl.value.trim(), url: url.value.trim(), extra: extra.value.trim() || undefined };
     }).filter(l => l.label && l.url);
+  }
+
+  // ---------- intro song library ----------
+  let songIdSeq = 0;
+  function newSongId(){ return 's' + (Date.now().toString(36)) + (songIdSeq++); }
+
+  function addSongRow(t){
+    t = t || { id: newSongId(), label:'', url:'', startAt: 0, active:false };
+    const row = document.createElement('div');
+    row.className = 'linkrow';
+    row.dataset.songId = t.id;
+    row.innerHTML = `
+      <div class="top">
+        <input class="lbl" type="text" placeholder="Track name (e.g. know who you are)" value="${esc(t.label)}">
+        <input class="url" type="text" placeholder="https://soundcloud.com/deadbeat0nline/..." value="${esc(t.url)}">
+      </div>
+      <div class="bottom">
+        <input class="extra songstart" type="text" placeholder="Start at, e.g. 0:45" value="${esc(formatTime(t.startAt))}" style="flex:0 0 130px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);white-space:nowrap;cursor:pointer;">
+          <input type="radio" name="songactive" class="songactive" style="width:16px;height:16px;accent-color:#e33;" ${t.active ? 'checked' : ''}>
+          Use as intro
+        </label>
+        <button type="button" class="iconbtn danger remove" title="remove">✕</button>
+      </div>`;
+    row.querySelector('.remove').onclick = () => {
+      const wasActive = row.querySelector('.songactive').checked;
+      row.remove();
+      if(wasActive){
+        const first = $('songrows').querySelector('.songactive');
+        if(first) first.checked = true;
+      }
+    };
+    $('songrows').appendChild(row);
+  }
+  function readSongs(){
+    return [...$('songrows').querySelectorAll('.linkrow')].map(r => ({
+      id: r.dataset.songId,
+      label: r.querySelector('.lbl').value.trim(),
+      url: r.querySelector('.url').value.trim(),
+      startAt: parseTime(r.querySelector('.songstart').value),
+      active: r.querySelector('.songactive').checked
+    })).filter(t => t.label && t.url);
   }
 
   // ---------- status ----------
@@ -583,8 +619,18 @@
       $('np-title').value = (cfg.nowPlaying && cfg.nowPlaying.title) || '';
       $('np-url').value = (cfg.nowPlaying && cfg.nowPlaying.url) || '';
       $('is-enabled').checked = !!(cfg.introSong && cfg.introSong.enabled);
-      $('is-url').value = (cfg.introSong && cfg.introSong.url) || '';
-      $('is-start').value = formatTime(cfg.introSong ? cfg.introSong.startAt : 0);
+
+      // song library — migrate the old single-track shape (introSong.url) if that's all that's there
+      let library = cfg.introSongLibrary;
+      if(!library || !library.length){
+        library = (cfg.introSong && cfg.introSong.url)
+          ? [{ id: newSongId(), label: (cfg.nowPlaying && cfg.nowPlaying.title) || 'Intro track', url: cfg.introSong.url, startAt: cfg.introSong.startAt || 0, active: true }]
+          : [];
+      }
+      const activeId = cfg.introSong && cfg.introSong.activeId;
+      $('songrows').innerHTML = '';
+      library.forEach(t => addSongRow({ ...t, active: activeId ? (t.id === activeId) : !!t.active }));
+
       $('linkrows').innerHTML = '';
       (cfg.links || []).forEach(addRow);
       if(!(cfg.links || []).length) addRow();
@@ -599,13 +645,19 @@
     if(!validConn()) return;
     const links = readRows();
     if(!links.length){ status('Add at least one link before publishing.', 'err'); return; }
+    const songs = readSongs();
+    if($('is-enabled').checked && !songs.length){
+      status('Add at least one track (or turn off the intro song toggle) before publishing.', 'err');
+      return;
+    }
+    const active = songs.find(s => s.active) || songs[0];
     const cfg = {
       nowPlaying: { title: $('np-title').value.trim(), url: $('np-url').value.trim() },
       introSong: {
         enabled: $('is-enabled').checked,
-        url: $('is-url').value.trim(),
-        startAt: parseTime($('is-start').value)
+        activeId: active ? active.id : null
       },
+      introSongLibrary: songs.map(({ active, ...rest }) => rest),
       links
     };
     $('save').disabled = true;
@@ -706,6 +758,12 @@
   refreshConnBar();
   addRow({ label:'Instagram', url:'' });
   $('add').onclick = () => addRow();
+  $('add-song').onclick = () => {
+    addSongRow();
+    // auto-select the very first track added so there's always an active one
+    const rows = $('songrows').querySelectorAll('.songactive');
+    if(rows.length === 1) rows[0].checked = true;
+  };
   $('load').onclick = loadConfig;
   $('save').onclick = saveConfig;
   ['gh-user','gh-repo','gh-token'].forEach(id => $(id).addEventListener('input', refreshConnBar));

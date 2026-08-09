@@ -615,8 +615,19 @@
   // unless introSong.enabled is true in config.json.
   // ============================================================
   function initIntroSong(cfg){
-    const s = cfg.introSong;
-    if(!s || !s.enabled || !s.url) return;
+    const is = cfg.introSong;
+    if(!is || !is.enabled) return;
+
+    // pick the active track from the library; fall back to the old
+    // single-track config shape if that's all that's there
+    let s = null;
+    const lib = cfg.introSongLibrary;
+    if(lib && lib.length){
+      s = lib.find(t => t.id === is.activeId) || lib[0];
+    } else if(is.url){
+      s = is;
+    }
+    if(!s || !s.url) return;
     const startMs = Math.max(0, (parseFloat(s.startAt) || 0) * 1000);
 
     // hidden SoundCloud player + widget API to control it
