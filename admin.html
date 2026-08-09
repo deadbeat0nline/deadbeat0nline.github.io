@@ -343,6 +343,7 @@
   <div class="connbar off" id="connbar">
     <div class="dot"></div>
     <div class="msg" id="connmsg">Not connected yet — set up your connection below.</div>
+    <button id="forget-device" title="Erase the saved username, repo, and token from this device">🗑 Forget device</button>
     <button id="conntoggle">Set up</button>
   </div>
 
@@ -352,15 +353,15 @@
 
     <div class="field">
       <label>GitHub username</label>
-      <input type="text" id="gh-user" placeholder="e.g. deadbeat0nline">
+      <input type="text" id="gh-user" placeholder="e.g. deadbeat0nline" autocomplete="off">
     </div>
     <div class="field">
       <label>Repository name</label>
-      <input type="text" id="gh-repo" placeholder="e.g. deadbeat0nline.github.io">
+      <input type="text" id="gh-repo" placeholder="e.g. deadbeat0nline.github.io" autocomplete="off">
     </div>
     <div class="field">
       <label>Access token</label>
-      <input type="password" id="gh-token" placeholder="github_pat_...">
+      <input type="password" id="gh-token" placeholder="github_pat_..." autocomplete="off">
     </div>
     <div class="field" style="display:none" id="branch-field">
       <label>Branch</label>
@@ -371,6 +372,7 @@
       <input type="checkbox" id="remember">
       <span>Remember this on this device (so you don't re-enter it)</span>
     </div>
+    <p class="desc" style="margin-top:-6px;">For your safety, a remembered login auto-clears after 60 days of not opening this panel — you'll just need to paste your token back in. You can also clear it immediately anytime with "Forget device" up top.</p>
 
     <details>
       <summary>Don't have a token? Here's how to make one</summary>
@@ -440,9 +442,12 @@
   let currentSha = null;
 
   // ---------- storage (best-effort; fine if unavailable) ----------
+  // Saved logins auto-expire after this many days of not opening the panel,
+  // so a token can't sit forever on a device that's lost, sold, or shared.
+  const REMEMBER_DAYS = 60;
   function store(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
   function unstore(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-  function clearstore(){ try{ ['db_user','db_repo','db_branch','db_token'].forEach(k => localStorage.removeItem(k)); }catch(e){} }
+  function clearstore(){ try{ ['db_user','db_repo','db_branch','db_token','db_saved_at'].forEach(k => localStorage.removeItem(k)); }catch(e){} }
 
   // ---------- connection bar ----------
   function refreshConnBar(){
@@ -664,19 +669,40 @@
       store('db_repo', $('gh-repo').value.trim());
       store('db_branch', branch());
       store('db_token', $('gh-token').value.trim());
+      store('db_saved_at', String(Date.now()));
     } else {
       clearstore();
     }
   }
 
+  function forgetDevice(){
+    clearstore();
+    $('gh-user').value = ''; $('gh-repo').value = ''; $('gh-token').value = '';
+    $('gh-branch').value = 'main'; $('remember').checked = false;
+    refreshConnBar();
+    status('Saved login cleared from this device.', 'ok');
+  }
+  $('forget-device').onclick = forgetDevice;
+
   // ---------- init ----------
-  ['db_user','db_repo','db_branch','db_token'].forEach((k, i) => {
-    const v = unstore(k);
-    if(v){
-      [$('gh-user'), $('gh-repo'), $('gh-branch'), $('gh-token')][i].value = v;
-      $('remember').checked = true;
+  (function(){
+    const savedAt = parseInt(unstore('db_saved_at'), 10);
+    const ageDays = savedAt ? (Date.now() - savedAt) / 86400000 : null;
+    if(ageDays !== null && ageDays > REMEMBER_DAYS){
+      clearstore();
+      status('Your saved login expired after ' + REMEMBER_DAYS + ' days for security — paste your token back in below.', 'err');
+      return;
     }
-  });
+    ['db_user','db_repo','db_branch','db_token'].forEach((k, i) => {
+      const v = unstore(k);
+      if(v){
+        [$('gh-user'), $('gh-repo'), $('gh-branch'), $('gh-token')][i].value = v;
+        $('remember').checked = true;
+      }
+    });
+    // backfill a save timestamp for logins saved before this feature existed
+    if($('remember').checked && !savedAt) store('db_saved_at', String(Date.now()));
+  })();
   refreshConnBar();
   addRow({ label:'Instagram', url:'' });
   $('add').onclick = () => addRow();
