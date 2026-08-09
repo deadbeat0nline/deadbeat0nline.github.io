@@ -759,8 +759,7 @@
   })();
 
   // terminal boot: type the name, hold a beat, then the tube flashes to life.
-  // stretched out so the intro song (which starts as soon as it can) is
-  // already rolling before the flash hits.
+  // kept tight (~2s total) to match the intro song's drop.
   (function(){
     const el = document.getElementById('typed');
     const word = 'deadbeat0nline';
@@ -774,10 +773,10 @@
             document.body.classList.add('on');
             window.__bootFlashed = true;
             document.dispatchEvent(new Event('siteboot'));
-          }, 1300);
+          }, 450);
         }
-      }, 155);
-    }, 400);
+      }, 100);
+    }, 150);
   })();
 </script>
 
