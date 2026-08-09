@@ -576,7 +576,7 @@
     const np = document.getElementById('nowplaying');
     if(cfg.nowPlaying && cfg.nowPlaying.title){
       np.href = cfg.nowPlaying.url || '#';
-      np.textContent = cfg.nowPlaying.title.toUpperCase();
+      np.textContent = cfg.nowPlaying.title.toUpperCase() + ' \u2014 OUT NOW';
     } else {
       np.style.display = 'none';
     }
