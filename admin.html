@@ -400,6 +400,25 @@
   </div>
 
   <div class="card">
+    <h2>🔊 Intro song</h2>
+    <p class="desc">Plays a song from SoundCloud while the site boots up — set the start time so the drop hits right when the screen flashes on. Heads up: some phones block auto-playing sound until the visitor taps the screen once.</p>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="is-enabled" style="width:18px;height:18px;accent-color:#e33;">
+        Play intro song when the site loads
+      </label>
+    </div>
+    <div class="field">
+      <label>SoundCloud song link</label>
+      <input type="url" id="is-url" placeholder="https://soundcloud.com/deadbeat0nline/your-song">
+    </div>
+    <div class="field">
+      <label>Start the song at (so the drop lands on the intro — use 1:23 or plain seconds like 83)</label>
+      <input type="text" id="is-start" placeholder="e.g. 0:45">
+    </div>
+  </div>
+
+  <div class="card">
     <h2>🔗 Your links</h2>
     <p class="desc">These show up as your leaderboard / link list. Drag isn't supported yet — use the arrows to reorder.</p>
     <div id="linkrows"></div>
@@ -527,6 +546,26 @@
     return new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g,'')), c => c.charCodeAt(0)));
   }
 
+  // "1:23" / "1:23.5" / "83" / "83.5" -> seconds
+  function parseTime(str){
+    str = (str || '').trim();
+    if(!str) return 0;
+    if(str.includes(':')){
+      const [m, s] = str.split(':');
+      return Math.max(0, (parseFloat(m) || 0) * 60 + (parseFloat(s) || 0));
+    }
+    return Math.max(0, parseFloat(str) || 0);
+  }
+  // seconds -> "m:ss" (keeps decimals if present)
+  function formatTime(sec){
+    sec = Math.max(0, parseFloat(sec) || 0);
+    if(!sec) return '';
+    const m = Math.floor(sec / 60);
+    let s = (sec - m * 60).toFixed(sec % 1 ? 1 : 0);
+    if(parseFloat(s) < 10) s = '0' + s;
+    return m + ':' + s;
+  }
+
   async function loadConfig(){
     if(!validConn()) return;
     status('Loading your current links...', 'busy');
@@ -538,6 +577,9 @@
       const cfg = JSON.parse(b64decode(data.content));
       $('np-title').value = (cfg.nowPlaying && cfg.nowPlaying.title) || '';
       $('np-url').value = (cfg.nowPlaying && cfg.nowPlaying.url) || '';
+      $('is-enabled').checked = !!(cfg.introSong && cfg.introSong.enabled);
+      $('is-url').value = (cfg.introSong && cfg.introSong.url) || '';
+      $('is-start').value = formatTime(cfg.introSong ? cfg.introSong.startAt : 0);
       $('linkrows').innerHTML = '';
       (cfg.links || []).forEach(addRow);
       if(!(cfg.links || []).length) addRow();
@@ -554,6 +596,11 @@
     if(!links.length){ status('Add at least one link before publishing.', 'err'); return; }
     const cfg = {
       nowPlaying: { title: $('np-title').value.trim(), url: $('np-url').value.trim() },
+      introSong: {
+        enabled: $('is-enabled').checked,
+        url: $('is-url').value.trim(),
+        startAt: parseTime($('is-start').value)
+      },
       links
     };
     $('save').disabled = true;

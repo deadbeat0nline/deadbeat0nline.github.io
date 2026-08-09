@@ -276,8 +276,8 @@
   .boot .term{
     font-family:'VT323',monospace;
     font-size:clamp(34px,9vw,58px);
-    color:#c9ffd0;
-    text-shadow:0 0 10px rgba(120,255,150,0.55), 0 0 40px rgba(80,255,120,0.25);
+    color:#ff2b3a;
+    text-shadow:0 0 10px rgba(255,43,58,0.55), 0 0 40px rgba(255,20,40,0.25);
     letter-spacing:2px;
     display:flex;
     align-items:center;
@@ -287,8 +287,8 @@
     width:0.55em;
     height:1em;
     margin-left:6px;
-    background:#c9ffd0;
-    box-shadow:0 0 12px rgba(120,255,150,0.7);
+    background:#ff2b3a;
+    box-shadow:0 0 12px rgba(255,43,58,0.7);
     animation:blink 1s steps(1) infinite;
   }
   body.on .boot{ animation:crtflash .45s ease-out forwards; }
@@ -605,8 +605,50 @@
 
   fetch('config.json?t=' + Date.now(), { cache: 'no-store' })
     .then(r => r.ok ? r.json() : Promise.reject())
-    .then(render)
+    .then(cfg => { render(cfg); initIntroSong(cfg); })
     .catch(() => render(FALLBACK));
+
+  // ============================================================
+  // INTRO SONG — plays your track from a chosen timestamp while
+  // the site boots, so the drop hits when the screen flashes on.
+  // Configure it in the control panel (admin.html). Does nothing
+  // unless introSong.enabled is true in config.json.
+  // ============================================================
+  function initIntroSong(cfg){
+    const s = cfg.introSong;
+    if(!s || !s.enabled || !s.url) return;
+    const startMs = Math.max(0, (parseFloat(s.startAt) || 0) * 1000);
+
+    // hidden SoundCloud player + widget API to control it
+    const f = document.createElement('iframe');
+    f.allow = 'autoplay';
+    f.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0.01;pointer-events:none;left:-9999px;bottom:0;border:0;';
+    f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(s.url) +
+            '&auto_play=false&visual=false&show_artwork=false&show_comments=false';
+    document.body.appendChild(f);
+    const api = document.createElement('script');
+    api.src = 'https://w.soundcloud.com/player/api.js';
+    api.onload = () => {
+      const w = SC.Widget(f);
+      let seeked = false;
+      w.bind(SC.Widget.Events.READY, () => {
+        w.seekTo(startMs);
+        w.play();
+      });
+      w.bind(SC.Widget.Events.PLAY, () => {
+        if(!seeked){ seeked = true; w.seekTo(startMs); }
+      });
+      // browsers often block autoplay with sound — start on first tap/click instead
+      const kick = () => {
+        w.isPaused(paused => { if(paused){ if(!seeked){ seeked = true; w.seekTo(startMs); } w.play(); } });
+        removeEventListener('pointerdown', kick);
+        removeEventListener('keydown', kick);
+      };
+      addEventListener('pointerdown', kick);
+      addEventListener('keydown', kick);
+    };
+    document.head.appendChild(api);
+  }
 
   // the machine still takes a hit every 10 seconds
   (function(){
