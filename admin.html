@@ -403,7 +403,7 @@
 
   <div class="card">
     <h2>🔊 Intro song</h2>
-    <p class="desc">Build a library of your SoundCloud tracks below, pick which one plays while the site boots up, and set where it starts so the drop lands right when the screen flashes on. Heads up: some phones block auto-playing sound until the visitor taps the screen once.</p>
+    <p class="desc">Build a library of your SoundCloud tracks below, pick which one plays while the site boots up, and use the 🎧 button to actually listen and grab the exact spot where the drop lands. Heads up: some phones block auto-playing sound until the visitor taps the screen once.</p>
     <div class="field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
         <input type="checkbox" id="is-enabled" style="width:18px;height:18px;accent-color:#e33;">
@@ -520,6 +520,20 @@
   let songIdSeq = 0;
   function newSongId(){ return 's' + (Date.now().toString(36)) + (songIdSeq++); }
 
+  // load the SoundCloud widget API once, shared by every track's preview player
+  let scApiPromise = null;
+  function ensureSCApi(){
+    if(window.SC && window.SC.Widget) return Promise.resolve();
+    if(scApiPromise) return scApiPromise;
+    scApiPromise = new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = 'https://w.soundcloud.com/player/api.js';
+      s.onload = resolve;
+      document.head.appendChild(s);
+    });
+    return scApiPromise;
+  }
+
   function addSongRow(t){
     t = t || { id: newSongId(), label:'', url:'', startAt: 0, active:false };
     const row = document.createElement('div');
@@ -531,15 +545,61 @@
         <input class="url" type="text" placeholder="https://soundcloud.com/deadbeat0nline/..." value="${esc(t.url)}">
       </div>
       <div class="bottom">
-        <input class="extra songstart" type="text" placeholder="Start at, e.g. 0:45" value="${esc(formatTime(t.startAt))}" style="flex:0 0 130px;">
+        <input class="extra songstart" type="text" placeholder="Start at, e.g. 0:45" value="${esc(formatTime(t.startAt))}" style="flex:0 0 110px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);white-space:nowrap;cursor:pointer;">
           <input type="radio" name="songactive" class="songactive" style="width:16px;height:16px;accent-color:#e33;" ${t.active ? 'checked' : ''}>
           Use as intro
         </label>
+        <button type="button" class="iconbtn preview-toggle" title="listen and pick the start point">🎧</button>
         <button type="button" class="iconbtn danger remove" title="remove">✕</button>
+      </div>
+      <div class="preview" style="display:none;margin-top:10px;">
+        <div class="scplayer"></div>
+        <button type="button" class="addlink setstart" style="margin-top:8px;padding:10px;font-size:13px;">⏱ Use whatever's playing right now as the start</button>
       </div>`;
+
+    let widget = null;
+    const previewBox = row.querySelector('.preview');
+    const previewBtn = row.querySelector('.preview-toggle');
+    const playerHost = row.querySelector('.scplayer');
+
+    previewBtn.onclick = async () => {
+      const isOpen = previewBox.style.display !== 'none';
+      if(isOpen){
+        if(widget) widget.pause();
+        previewBox.style.display = 'none';
+        return;
+      }
+      const url = row.querySelector('.url').value.trim();
+      if(!url){ status('Paste a SoundCloud track link first.', 'err'); return; }
+      previewBox.style.display = 'block';
+      playerHost.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px 0;">Loading player…</div>';
+      await ensureSCApi();
+      playerHost.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.width = '100%';
+      iframe.height = '166';
+      iframe.frameBorder = '0';
+      iframe.allow = 'autoplay';
+      iframe.style.borderRadius = '8px';
+      iframe.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(url) +
+                   '&color=%23e33333&auto_play=false&show_artwork=true';
+      playerHost.appendChild(iframe);
+      widget = SC.Widget(iframe);
+    };
+
+    row.querySelector('.setstart').onclick = () => {
+      if(!widget){ status('Open the preview player and play the track first.', 'err'); return; }
+      widget.getPosition((ms) => {
+        const secs = ms / 1000;
+        row.querySelector('.songstart').value = formatTime(secs);
+        status('Start point set to ' + (formatTime(secs) || '0:00') + '.', 'ok');
+      });
+    };
+
     row.querySelector('.remove').onclick = () => {
       const wasActive = row.querySelector('.songactive').checked;
+      if(widget) widget.pause();
       row.remove();
       if(wasActive){
         const first = $('songrows').querySelector('.songactive');
