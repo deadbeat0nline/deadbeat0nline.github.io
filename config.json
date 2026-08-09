@@ -4,7 +4,7 @@
     "url": ""
   },
   "introSong": {
-    "enabled": true,
+    "enabled": false,
     "activeId": "smsliv40v0"
   },
   "introSongLibrary": [
@@ -18,7 +18,7 @@
       "id": "smsliv40v0",
       "label": "know who you are",
       "url": "https://soundcloud.com/deadbeatonline/know-who-you-are",
-      "startAt": 11
+      "startAt": 13
     }
   ],
   "links": [
