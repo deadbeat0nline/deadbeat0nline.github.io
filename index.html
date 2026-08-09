@@ -641,39 +641,55 @@
     api.src = 'https://w.soundcloud.com/player/api.js';
     api.onload = () => {
       const w = SC.Widget(f);
-      let widgetReady = false;
-      let started = false;
       let seeked = false;
+      let playing = false;
+      let seekConfirmed = false;
+      let revealed = false;
 
-      // only actually hit play once BOTH the track is loaded AND the
-      // boot flash has fired — whichever of those finishes last is what
-      // decides the moment, so the drop always lands on the flash.
-      function tryStart(){
-        if(started || !widgetReady || !window.__bootFlashed) return;
-        started = true;
-        w.seekTo(startMs);
-        w.play();
+      // The trick: seeking to a mid-song timestamp and hitting play at
+      // that instant makes SoundCloud buffer that exact spot, which
+      // takes a beat — audibly late if done right at the boot flash.
+      // So instead we start it MUTED as early as possible, seek once
+      // it's actually playing, and let it buffer/settle silently in
+      // the background. By the time the flash happens, all we do is
+      // turn the volume up — no seeking, no buffering, no lag.
+      function reveal(){
+        if(revealed) return;
+        revealed = true;
+        w.setVolume(100);
+      }
+      // only reveal once the flash has happened AND the seek is confirmed —
+      // revealing before the seek settles risks a flash of audio from 0:00
+      function maybeReveal(){
+        if(window.__bootFlashed && seekConfirmed) reveal();
       }
 
       w.bind(SC.Widget.Events.READY, () => {
-        widgetReady = true;
-        w.seekTo(startMs); // cue it up at the right spot while still paused
-        tryStart();
+        w.setVolume(0);
+        w.play();
       });
       w.bind(SC.Widget.Events.PLAY, () => {
+        playing = true;
         if(!seeked){ seeked = true; w.seekTo(startMs); }
       });
-      document.addEventListener('siteboot', tryStart);
+      w.bind(SC.Widget.Events.SEEK, () => {
+        seekConfirmed = true;
+        maybeReveal();
+      });
+      document.addEventListener('siteboot', () => {
+        maybeReveal();
+        // safety net: if the SEEK event never fires for some reason,
+        // don't leave the song silent forever
+        setTimeout(() => { if(playing) reveal(); }, 1200);
+      });
 
-      // browsers often block autoplay with sound until a real tap/click —
-      // this both unlocks it and covers the case where tryStart() above
-      // got silently blocked
+      // browsers sometimes block autoplay entirely (even muted) until a
+      // real tap/click — this recovers audio in that case
       const kick = () => {
-        if(started){
-          w.isPaused(paused => { if(paused) w.play(); });
-        } else {
-          tryStart();
-        }
+        w.isPaused(paused => {
+          if(paused){ w.setVolume(100); w.play(); reveal(); }
+          else { reveal(); }
+        });
         removeEventListener('pointerdown', kick);
         removeEventListener('keydown', kick);
       };
