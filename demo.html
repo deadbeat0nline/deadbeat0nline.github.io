@@ -198,19 +198,23 @@
 
   a.nowplaying{
     display:block;
-    margin-top:auto;
-    padding-top:26px;
-    font-size:10px;
+    width:100%;
+    margin:0 0 22px;
+    padding:16px 10px;
+    font-size:16px;
     color:var(--gold);
     text-decoration:none;
     letter-spacing:1px;
-    line-height:1.8;
+    line-height:1.6;
+    border-top:2px solid #8a0000;
+    border-bottom:2px solid #8a0000;
+    text-shadow:0 0 12px rgba(255,215,0,0.55);
     animation:blink 1.6s steps(1) infinite;
   }
   a.nowplaying:hover{
     color:#fff;
     animation:none;
-    text-shadow:0 0 10px var(--gold);
+    text-shadow:0 0 14px var(--gold);
   }
   @keyframes blink{ 50%{ opacity:.35; } }
 
@@ -496,7 +500,7 @@
     .name{ font-size:clamp(24px,7.6vw,38px); }
     .table-head{ font-size:9px; }
     .links a{ font-size:13px; padding:17px 10px; }
-    a.nowplaying{ font-size:10px; }
+    a.nowplaying{ font-size:13px; }
     .press-start{ font-size:9px; margin-top:20px; }
     .press-start .count{ font-size:15px; }
   }
@@ -545,12 +549,12 @@
   <!-- EDIT ME: your name -->
   <h1 class="name">deadbeat0nline<span class="burnin" aria-hidden="true">deadbeat0nline</span></h1>
 
+  <a class="nowplaying" id="nowplaying" href="#" target="_blank" rel="noopener noreferrer">...</a>
+
   <div class="table-head">
     <span>RANK</span><span>DESTINATION</span><span>SCORE</span>
   </div>
   <ul class="links" id="links"></ul>
-
-  <a class="nowplaying" id="nowplaying" href="#" target="_blank" rel="noopener noreferrer">...</a>
 
   <footer>&copy; 199X DEADBEAT CORP &mdash; LICENSED BY NO ONE</footer>
 </div>

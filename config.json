@@ -1,24 +1,24 @@
 {
   "nowPlaying": {
-    "title": "",
-    "url": ""
+    "title": "ts hard",
+    "url": "https://soundcloud.com/deadbeatonline"
   },
   "introSong": {
-    "enabled": false,
-    "activeId": "smsliv40v0"
+    "enabled": true,
+    "activeId": "tshard"
   },
   "introSongLibrary": [
     {
       "id": "tshard",
       "label": "ts hard",
       "url": "https://deadbeat0nline.com/ts-hard.mp3",
-      "startAt": 36
+      "startAt": 0
     },
     {
       "id": "smsliv40v0",
       "label": "know who you are",
       "url": "https://soundcloud.com/deadbeatonline/know-who-you-are",
-      "startAt": 13
+      "startAt": 12
     }
   ],
   "links": [
