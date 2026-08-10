@@ -151,12 +151,52 @@
     70%{ opacity:1; transform:translateX(5px); }
     100%{ opacity:1; transform:translateX(0); }
   }
+
+  /* --- K.O. — the machine takes a hit on the drops --- */
+  body.ko{ animation:kofry .16s steps(1) infinite; }
+  @keyframes kofry{
+    0%{ filter:none; }
+    25%{ filter:invert(1) hue-rotate(90deg); }
+    45%{ filter:contrast(2) saturate(3) hue-rotate(-60deg); }
+    65%{ filter:invert(.85) hue-rotate(180deg); }
+    85%{ filter:contrast(1.5) brightness(1.4); }
+    100%{ filter:none; }
+  }
+  body.ko #c, body.ko .stage{ animation:koshake .12s steps(2) infinite; }
+  @keyframes koshake{
+    0%{ transform:translate(0,0); }
+    25%{ transform:translate(-8px,4px) skewX(-2deg); }
+    50%{ transform:translate(7px,-5px); }
+    75%{ transform:translate(-4px,-3px) skewX(2deg); }
+  }
+  .koflash{
+    position:fixed; inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:40;
+    background:rgba(90,0,0,0.45);
+    font-family:'Nosifer',cursive;
+    font-size:clamp(70px,22vw,180px);
+    color:#e01212;
+    text-shadow:4px 4px 0 #2a0000, 0 0 60px rgba(255,0,0,0.8);
+    pointer-events:none;
+  }
+  body.ko .koflash{ display:flex; animation:kostrobe .14s steps(1) infinite; }
+  @keyframes kostrobe{
+    0%{ background:rgba(90,0,0,0.5); transform:rotate(-5deg) translate(0,0); }
+    30%{ background:rgba(0,0,0,0.75); transform:rotate(-4deg) translate(-14px,6px) scale(1.04); }
+    60%{ background:rgba(120,0,0,0.35); transform:rotate(-6deg) translate(10px,-8px); }
+    80%{ background:rgba(30,0,0,0.7); transform:rotate(-5deg) translate(-6px,3px) scale(0.98); }
+    100%{ background:rgba(90,0,0,0.5); transform:rotate(-5deg) translate(0,0); }
+  }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 <div class="glass"></div>
+<div class="koflash" aria-hidden="true">K.O.</div>
 
 <div class="stage">
   <h1 class="mark">deadbeat0nline</h1>
@@ -377,6 +417,18 @@ function initIntroSong(cfg){
     const t0 = performance.now();
     const A = { bass:0, mid:0, treb:0, level:0, beat:0, warpKick:0 };
 
+    // K.O. — the machine takes a hit on the big drops. Fires off the same
+    // baked warpKick signal that drives the shader, with a cooldown so it
+    // punctuates instead of strobing.
+    let lastKo = -999;
+    const KO_GAP = 2.0;
+    function koHit(now){
+      if((now - lastKo) < KO_GAP) return;
+      lastKo = now;
+      document.body.classList.add('ko');
+      setTimeout(() => document.body.classList.remove('ko'), 700);
+    }
+
     function frame(){
       const now = (performance.now() - t0) / 1000;
       const audio = window.__introAudio;
@@ -397,6 +449,8 @@ function initIntroSong(cfg){
         A.treb = 0.16 + 0.10 * Math.sin(now * 2.7);
         A.level = 0.30; A.beat *= 0.90; A.warpKick = 0;
       }
+
+      if(A.warpKick > 0.68) koHit(now);
 
       viz.draw(now, A);
 
