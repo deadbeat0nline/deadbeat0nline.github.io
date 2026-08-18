@@ -44,20 +44,22 @@ nav a::after{content:'';position:absolute;left:0;bottom:0;height:1px;width:0;bac
 nav a:hover{color:var(--sky)} nav a:hover::after{width:100%}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:.94;transform:translateY(0)}}
 
-/* ---- sound: ts hard ---- */
-.player{position:fixed;right:clamp(24px,6vw,86px);bottom:clamp(46px,9vh,88px);z-index:5;
-  display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;
+/* ---- sound ---- */
+.player{position:fixed;right:clamp(24px,6vw,86px);bottom:clamp(42px,8.5vh,84px);z-index:5;
+  width:44px;height:44px;border:1px solid rgba(232,211,201,.5);border-radius:50%;
+  display:grid;place-items:center;cursor:pointer;user-select:none;
+  transition:border-color .3s,background .3s;
   opacity:0;animation:rise 1.2s cubic-bezier(.22,.61,.36,1) 1.6s forwards}
-.player .lab{font-weight:300;font-size:clamp(9.5px,.95vw,11px);letter-spacing:.26em;
-  text-transform:uppercase;color:var(--haze);text-shadow:0 1px 18px rgba(0,0,0,.75);transition:color .3s}
-.player:hover .lab{color:var(--sky)}
-.bars{display:flex;gap:2px;align-items:flex-end;height:12px}
-.bars b{width:2px;height:3px;background:var(--haze);opacity:.85}
-.player.on .bars b{animation:eq .9s ease-in-out infinite}
-.player.on .bars b:nth-child(2){animation-delay:.15s}
-.player.on .bars b:nth-child(3){animation-delay:.3s}
-.player.on .bars b:nth-child(4){animation-delay:.45s}
-@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+.player:hover{border-color:var(--sky);background:rgba(244,227,215,.06)}
+.player .tri{width:0;height:0;border-left:11px solid var(--haze);
+  border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px;transition:border-color .3s}
+.player:hover .tri{border-left-color:var(--sky)}
+.player .pause{display:none;gap:4px}
+.player .pause i{width:3px;height:14px;background:var(--haze)}
+.player.on .tri{display:none}
+.player.on .pause{display:flex}
+.player.on{animation:breathe 2.4s ease-in-out infinite alternate}
+@keyframes breathe{from{border-color:rgba(232,211,201,.4)}to{border-color:rgba(244,227,215,.85)}}
 
 @media(max-width:700px){
   :root{--band:58vh;--feather:20vh}
@@ -79,21 +81,21 @@ nav a:hover{color:var(--sky)} nav a:hover::after{width:100%}
   </nav>
 </div>
 
-<div class="player" id="pl">
-  <div class="bars"><b></b><b></b><b></b><b></b></div>
-  <span class="lab" id="plab">sound — ts hard</span>
+<div class="player" id="pl" aria-label="play">
+  <span class="tri"></span>
+  <span class="pause"><i></i><i></i></span>
 </div>
 
 <audio id="au" src="ts-hard.mp3" preload="none" loop></audio>
 
 <script>
-const pl=document.getElementById('pl'), au=document.getElementById('au'), lab=document.getElementById('plab');
+const pl=document.getElementById('pl'), au=document.getElementById('au');
 pl.addEventListener('click',()=>{
   if(au.paused){ au.volume=0; au.play().then(()=>{
-      pl.classList.add('on'); lab.textContent='ts hard';
+      pl.classList.add('on');
       let v=0; const f=setInterval(()=>{ v=Math.min(1,v+.05); au.volume=v; if(v>=1)clearInterval(f); },60);
     }).catch(()=>{});
-  } else { au.pause(); pl.classList.remove('on'); lab.textContent='sound — ts hard'; }
+  } else { au.pause(); pl.classList.remove('on'); }
 });
 </script>
 </body></html>
