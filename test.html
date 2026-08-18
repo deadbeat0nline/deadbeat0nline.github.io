@@ -16,8 +16,6 @@ html,body{margin:0;height:100%;height:100dvh;background:#000;color:var(--sky);
      rgba(0,0,0,.45) calc(var(--band) + var(--feather)*.45),transparent calc(var(--band) + var(--feather)))}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.05;z-index:8;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-.tag{position:fixed;top:12px;right:16px;z-index:9;font:11px/1 ui-monospace,monospace;
-  color:rgba(255,255,255,.35);letter-spacing:.08em}
 .stack{position:fixed;left:clamp(24px,6vw,86px);bottom:clamp(58px,12vh,110px);z-index:5}
 h1{margin:0;font-weight:200;font-size:clamp(15px,2.1vw,25px);letter-spacing:.44em;text-indent:.44em;
   text-transform:uppercase;opacity:0;animation:rise 1.7s cubic-bezier(.22,.61,.36,1) .5s forwards}
@@ -50,7 +48,6 @@ nav a:hover{color:var(--sky)} nav a:hover::after{width:100%}
   <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
 </filter></svg>
 <div class="strip"></div><div class="glow"></div><div class="grain"></div>
-<div class="tag">wind · 50%</div>
 <div class="stack">
   <h1>deadbeat0nline</h1>
   <nav><a href="#">instagram</a><a href="#">tiktok</a><a href="#">community</a></nav>
