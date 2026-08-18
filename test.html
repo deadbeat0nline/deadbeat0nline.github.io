@@ -3,6 +3,9 @@
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="deadbeat0nline — artist, tx">
+<meta property="og:title" content="deadbeat0nline">
+<meta property="og:image" content="https://deadbeat0nline.com/marsh.jpg">
 <title>deadbeat0nline</title>
 <link rel="preload" as="image" href="marsh.jpg?v=4">
 <style>
@@ -41,17 +44,56 @@ nav a::after{content:'';position:absolute;left:0;bottom:0;height:1px;width:0;bac
 nav a:hover{color:var(--sky)} nav a:hover::after{width:100%}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:.94;transform:translateY(0)}}
 
+/* ---- sound: ts hard ---- */
+.player{position:fixed;right:clamp(24px,6vw,86px);bottom:clamp(46px,9vh,88px);z-index:5;
+  display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;
+  opacity:0;animation:rise 1.2s cubic-bezier(.22,.61,.36,1) 1.6s forwards}
+.player .lab{font-weight:300;font-size:clamp(9.5px,.95vw,11px);letter-spacing:.26em;
+  text-transform:uppercase;color:var(--haze);text-shadow:0 1px 18px rgba(0,0,0,.75);transition:color .3s}
+.player:hover .lab{color:var(--sky)}
+.bars{display:flex;gap:2px;align-items:flex-end;height:12px}
+.bars b{width:2px;height:3px;background:var(--haze);opacity:.85}
+.player.on .bars b{animation:eq .9s ease-in-out infinite}
+.player.on .bars b:nth-child(2){animation-delay:.15s}
+.player.on .bars b:nth-child(3){animation-delay:.3s}
+.player.on .bars b:nth-child(4){animation-delay:.45s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+
 @media(max-width:700px){
   :root{--band:58vh;--feather:20vh}
   .strip{background-position:36% 40%}
-  .stack{left:26px;right:26px;bottom:calc(46px + env(safe-area-inset-bottom))}
+  .stack{left:26px;right:26px;bottom:calc(88px + env(safe-area-inset-bottom))}
   h1{letter-spacing:.34em;text-indent:.34em}
+  .player{left:26px;right:auto;bottom:calc(40px + env(safe-area-inset-bottom))}
 }
 @media (prefers-reduced-motion:reduce){.strip{animation:none}}
 </style></head><body>
 <div class="strip"></div><div class="glow"></div><div class="grain"></div>
+
 <div class="stack">
   <h1>deadbeat0nline</h1>
-  <nav><a href="#">instagram</a><a href="#">tiktok</a><a href="#">community</a></nav>
+  <nav>
+    <a href="https://www.instagram.com/deadbeat0nline/?hl=en" target="_blank" rel="noopener">instagram</a>
+    <a href="https://www.tiktok.com/@deadbeat0nline" target="_blank" rel="noopener">tiktok</a>
+    <a href="https://soundcloud.com/deadbeatonline" target="_blank" rel="noopener">soundcloud</a>
+  </nav>
 </div>
+
+<div class="player" id="pl">
+  <div class="bars"><b></b><b></b><b></b><b></b></div>
+  <span class="lab" id="plab">sound — ts hard</span>
+</div>
+
+<audio id="au" src="ts-hard.mp3" preload="none" loop></audio>
+
+<script>
+const pl=document.getElementById('pl'), au=document.getElementById('au'), lab=document.getElementById('plab');
+pl.addEventListener('click',()=>{
+  if(au.paused){ au.volume=0; au.play().then(()=>{
+      pl.classList.add('on'); lab.textContent='ts hard';
+      let v=0; const f=setInterval(()=>{ v=Math.min(1,v+.05); au.volume=v; if(v>=1)clearInterval(f); },60);
+    }).catch(()=>{});
+  } else { au.pause(); pl.classList.remove('on'); lab.textContent='sound — ts hard'; }
+});
+</script>
 </body></html>
